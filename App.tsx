@@ -6,15 +6,131 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { StatusBar, StyleSheet, useColorScheme, View, Text, ActivityIndicator } from 'react-native';
+import { StatusBar, StyleSheet, useColorScheme, View, Text, ActivityIndicator, Platform, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import messaging from '@react-native-firebase/messaging';
+import notifee, { AndroidImportance } from '@notifee/react-native';
+
+// Request notification permissions
+async function requestUserPermission() {
+  const authStatus = await messaging().requestPermission();
+  const enabled =
+    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+  if (enabled) {
+    console.log('Authorization status:', authStatus);
+  }
+
+  return enabled;
+}
+
+// Get FCM token
+async function getFCMToken() {
+  try {
+    // On iOS, we must register for remote messages before getting the token
+    if (Platform.OS === 'ios') {
+      await messaging().registerDeviceForRemoteMessages();
+    }
+    const token = await messaging().getToken();
+    console.log('FCM Token:', token);
+    // TODO: Send token to your backend server
+    return token;
+  } catch (error) {
+    console.error('Error getting FCM token:', error);
+    return null;
+  }
+}
+
+// Create Android notification channel
+async function createNotificationChannel() {
+  if (Platform.OS === 'android') {
+    await notifee.createChannel({
+      id: 'default',
+      name: 'Default Channel',
+      importance: AndroidImportance.HIGH,
+    });
+  }
+}
+
+// Display local notification for foreground messages
+async function displayNotification(remoteMessage: any) {
+  const { notification, data } = remoteMessage;
+  
+  if (Platform.OS === 'android') {
+    await notifee.displayNotification({
+      title: notification?.title || 'New Notification',
+      body: notification?.body || '',
+      android: {
+        channelId: 'default',
+        importance: AndroidImportance.HIGH,
+        pressAction: {
+          id: 'default',
+        },
+      },
+      data: data || {},
+    });
+  } else {
+    // iOS handles notifications automatically when app is in foreground
+    // but we can still show an alert if needed
+    if (notification?.title) {
+      Alert.alert(notification.title, notification.body || '');
+    }
+  }
+}
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
+    // Initialize notifications
+    const initializeNotifications = async () => {
+      try {
+        // Request permissions
+        const permissionGranted = await requestUserPermission();
+        
+        if (permissionGranted) {
+          // Create notification channel for Android
+          await createNotificationChannel();
+          
+          // Get FCM token
+          await getFCMToken();
+          
+          // Handle foreground messages
+          const unsubscribeForeground = messaging().onMessage(async remoteMessage => {
+            console.log('Foreground message received:', remoteMessage);
+            await displayNotification(remoteMessage);
+          });
+          
+          // Handle notification that opened the app from killed state
+          messaging()
+            .getInitialNotification()
+            .then(remoteMessage => {
+              if (remoteMessage) {
+                console.log('Notification caused app to open from quit state:', remoteMessage);
+                // Handle navigation or action based on notification data
+              }
+            });
+          
+          // Handle notification that opened the app from background state
+          messaging().onNotificationOpenedApp(remoteMessage => {
+            console.log('Notification caused app to open from background state:', remoteMessage);
+            // Handle navigation or action based on notification data
+          });
+          
+          return () => {
+            unsubscribeForeground();
+          };
+        }
+      } catch (error) {
+        console.error('Error initializing notifications:', error);
+      }
+    };
+
+    initializeNotifications();
+
     // Show splash screen for 2 seconds
     const timer = setTimeout(() => {
       setShowSplash(false);
