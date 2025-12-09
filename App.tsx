@@ -5,7 +5,7 @@
  * @format
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { StatusBar, StyleSheet, useColorScheme, View, Text, ActivityIndicator, Platform, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -83,6 +83,20 @@ async function displayNotification(remoteMessage: any) {
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const [showSplash, setShowSplash] = useState(true);
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
+  const [isWebViewReady, setIsWebViewReady] = useState(false);
+  const webViewRef = useRef<WebView | null>(null);
+
+  const sendTokenToWeb = useCallback(
+    (token: string) => {
+      if (webViewRef.current && isWebViewReady) {
+        webViewRef.current.postMessage(
+          JSON.stringify({ type: 'FCM_TOKEN', token }),
+        );
+      }
+    },
+    [isWebViewReady],
+  );
 
   useEffect(() => {
     // Initialize notifications
@@ -96,7 +110,11 @@ function App() {
           await createNotificationChannel();
           
           // Get FCM token
-          await getFCMToken();
+          const token = await getFCMToken();
+          if (token) {
+            setFcmToken(token);
+            sendTokenToWeb(token);
+          }
           
           // Handle foreground messages
           const unsubscribeForeground = messaging().onMessage(async remoteMessage => {
@@ -137,7 +155,13 @@ function App() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [sendTokenToWeb]);
+
+  useEffect(() => {
+    if (fcmToken) {
+      sendTokenToWeb(fcmToken);
+    }
+  }, [fcmToken, sendTokenToWeb]);
 
   return (
     <SafeAreaProvider>
@@ -145,7 +169,15 @@ function App() {
       {showSplash ? (
         <SplashScreen />
       ) : (
-        <WebViewContent />
+        <WebViewContent
+          webViewRef={webViewRef}
+          onWebViewReady={() => {
+            setIsWebViewReady(true);
+            if (fcmToken) {
+              sendTokenToWeb(fcmToken);
+            }
+          }}
+        />
       )}
     </SafeAreaProvider>
   );
@@ -162,13 +194,33 @@ function SplashScreen() {
   );
 }
 
-function WebViewContent() {
+function WebViewContent({
+  webViewRef,
+  onWebViewReady,
+}: {
+  webViewRef: React.RefObject<WebView | null>;
+  onWebViewReady: () => void;
+}) {
+  const handleMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data?.type === 'log') {
+        console.log('[WEBVIEW]', ...data.payload);
+      }
+    } catch (err) {
+      console.warn('Bad message from webview', err);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.webviewContainer} edges={['top', 'bottom']}>
       <WebView
-        source={{ uri: 'https://swim-tribe.com/' }}
+        ref={webViewRef}
+        source={{ uri: 'http://192.168.68.104:5173/' }}
         style={styles.webview}
         startInLoadingState={true}
+        onLoadEnd={onWebViewReady}
+        onMessage={handleMessage}
         renderLoading={() => (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
