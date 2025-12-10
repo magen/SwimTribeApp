@@ -6,11 +6,12 @@
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StatusBar, StyleSheet, useColorScheme, View, Text, ActivityIndicator, Platform, Alert } from 'react-native';
+import { StatusBar, StyleSheet, useColorScheme, View, ActivityIndicator, Platform, Alert } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import messaging from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
+import LottieView from 'lottie-react-native';
 
 // Request notification permissions
 async function requestUserPermission() {
@@ -34,7 +35,12 @@ async function getFCMToken() {
       await messaging().registerDeviceForRemoteMessages();
     }
     const token = await messaging().getToken();
-    console.log('FCM Token:', token);
+    if (!token) {
+      console.warn('FCM token is null');
+    } else{
+      console.log('FCM Token:', token);
+      }
+    
     // TODO: Send token to your backend server
     return token;
   } catch (error) {
@@ -111,6 +117,9 @@ function App() {
           
           // Get FCM token
           const token = await getFCMToken();
+          // print token to console
+          console.log('Retrieved FCM Token:', token);
+
           if (token) {
             setFcmToken(token);
             sendTokenToWeb(token);
@@ -187,8 +196,12 @@ function SplashScreen() {
   return (
     <SafeAreaView style={styles.splashContainer} edges={['top', 'bottom']}>
       <View style={styles.splashContent}>
-        <Text style={styles.splashText}>Swim Tribe</Text>
-        <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
+        <LottieView
+          source={require('./assets/animations/loading-animation.json')}
+          autoPlay
+          loop
+          style={styles.lottie}
+        />
       </View>
     </SafeAreaView>
   );
@@ -223,7 +236,12 @@ function WebViewContent({
         onMessage={handleMessage}
         renderLoading={() => (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <LottieView
+              source={require('./assets/animations/loading-animation.json')}
+              autoPlay
+              loop
+              style={styles.lottie}
+            />
           </View>
         )}
       />
@@ -244,15 +262,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  splashText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 20,
-  },
-  loader: {
-    marginTop: 20,
-  },
   webviewContainer: {
     flex: 1,
   },
@@ -268,6 +277,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
+  },
+  lottie: {
+    width: 220,
+    height: 220,
   },
 });
 

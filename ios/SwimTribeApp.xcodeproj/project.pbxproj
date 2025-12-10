@@ -292,6 +292,7 @@
 				DEVELOPMENT_TEAM = 2HB98Y672J;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = SwimTribeApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Swim Tribe";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -322,6 +323,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2HB98Y672J;
 				INFOPLIST_FILE = SwimTribeApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Swim Tribe";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
