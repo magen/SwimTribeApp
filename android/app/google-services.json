@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "783556501680",
+    "project_id": "swimtribeapp-ios",
+    "storage_bucket": "swimtribeapp-ios.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:783556501680:android:22c701525f534a38d95b75",
+        "android_client_info": {
+          "package_name": "com.swimtribeapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKJXQi41oM7-dS4-ruZ-H7zOmjVuGziGY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
