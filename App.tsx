@@ -55,6 +55,7 @@ async function createNotificationChannel() {
     await notifee.createChannel({
       id: 'default',
       name: 'Default Channel',
+      sound: 'default',
       importance: AndroidImportance.HIGH,
     });
   }
@@ -70,6 +71,7 @@ async function displayNotification(remoteMessage: any) {
       body: notification?.body || '',
       android: {
         channelId: 'default',
+        smallIcon: 'ic_stat_swimtribe',
         importance: AndroidImportance.HIGH,
         pressAction: {
           id: 'default',
@@ -144,7 +146,8 @@ function App() {
           // Handle notification that opened the app from background state
           messaging().onNotificationOpenedApp(remoteMessage => {
             console.log('Notification caused app to open from background state:', remoteMessage);
-            // Handle navigation or action based on notification data
+            // Handle navigation or action based on notification data            
+            
           });
           
           return () => {
