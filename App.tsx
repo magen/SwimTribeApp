@@ -7,11 +7,14 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { StatusBar, StyleSheet, useColorScheme, View, ActivityIndicator, Platform, Alert } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import Video from 'react-native-video';
 import messaging from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import LottieView from 'lottie-react-native';
+import inAppMessaging from '@react-native-firebase/in-app-messaging';
+import installations from '@react-native-firebase/installations';
 
 // Request notification permissions
 async function requestUserPermission() {
@@ -88,8 +91,10 @@ async function displayNotification(remoteMessage: any) {
   }
 }
 
-function App() {
+function AppInner() {
   const isDarkMode = useColorScheme() === 'dark';
+  const headerColor = '#11182780'; // brand header/status color
+  const insets = useSafeAreaInsets();
   const [showSplash, setShowSplash] = useState(true);
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [isWebViewReady, setIsWebViewReady] = useState(false);
@@ -160,14 +165,23 @@ function App() {
     };
 
     initializeNotifications();
-
-    // Show splash screen for 2 seconds
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
+    return undefined;
   }, [sendTokenToWeb]);
+
+  useEffect(() => {
+    const initInAppMessaging = async () => {
+      try {
+        await inAppMessaging().setAutomaticDataCollectionEnabled(true);
+        await inAppMessaging().setMessagesDisplaySuppressed(false);
+
+        const fid = await installations().getId();
+        console.log('Firebase Installation ID:', fid);
+      } catch (err) {
+        console.warn('Failed to init in-app messaging', err);
+      }
+    };
+    initInAppMessaging();
+  }, []);
 
   useEffect(() => {
     if (fcmToken) {
@@ -176,34 +190,50 @@ function App() {
   }, [fcmToken, sendTokenToWeb]);
 
   return (
+    <>
+      <StatusBar barStyle={'light-content'} backgroundColor={headerColor} />
+      <View style={{ height: insets.top, backgroundColor: headerColor }} />
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        {showSplash ? (
+          <SplashScreen onFinish={() => setShowSplash(false)} />
+        ) : (
+          <WebViewContent
+            webViewRef={webViewRef}
+            onWebViewReady={() => {
+              setIsWebViewReady(true);
+              if (fcmToken) {
+                sendTokenToWeb(fcmToken);
+              }
+            }}
+          />
+        )}
+      </View>
+    </>
+  );
+}
+
+function App() {
+  return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      {showSplash ? (
-        <SplashScreen />
-      ) : (
-        <WebViewContent
-          webViewRef={webViewRef}
-          onWebViewReady={() => {
-            setIsWebViewReady(true);
-            if (fcmToken) {
-              sendTokenToWeb(fcmToken);
-            }
-          }}
-        />
-      )}
+      <AppInner />
     </SafeAreaProvider>
   );
 }
 
-function SplashScreen() {
+function SplashScreen({ onFinish }: { onFinish: () => void }) {
   return (
-    <SafeAreaView style={styles.splashContainer} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.splashContainer} edges={['bottom']}>
       <View style={styles.splashContent}>
-        <LottieView
-          source={require('./assets/animations/loading-animation.json')}
-          autoPlay
-          loop
-          style={styles.lottie}
+        <Video
+          source={require('./assets/animations/splashAnimation_mov.mp4')}
+          style={styles.video}
+          resizeMode="contain"
+          muted
+          onEnd={onFinish}
+          onError={e => {
+            console.warn('Splash video error', e);
+            onFinish();
+          }}
         />
       </View>
     </SafeAreaView>
@@ -229,7 +259,7 @@ function WebViewContent({
   };
 
   return (
-    <SafeAreaView style={styles.webviewContainer} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.webviewContainer} edges={['bottom']}>
       <WebView
         ref={webViewRef}
         source={{ uri: 'http://192.168.68.104:5173/' }}
@@ -284,6 +314,10 @@ const styles = StyleSheet.create({
   lottie: {
     width: 220,
     height: 220,
+  },
+  video: {
+    width: 240,
+    height: 240,
   },
 });
 
