@@ -93,7 +93,7 @@ async function displayNotification(remoteMessage: any) {
 
 function AppInner() {
   const isDarkMode = useColorScheme() === 'dark';
-  const headerColor = '#11182780'; // brand header/status color
+  const headerColor = '#0B1F3F'; // brand header/status color
   const insets = useSafeAreaInsets();
   const [showSplash, setShowSplash] = useState(true);
   const [fcmToken, setFcmToken] = useState<string | null>(null);
@@ -191,7 +191,11 @@ function AppInner() {
 
   return (
     <>
-      <StatusBar barStyle={'light-content'} backgroundColor={headerColor} />
+      <StatusBar
+        barStyle={'light-content'}
+        backgroundColor={headerColor}
+        translucent={false}
+      />
       <View style={{ height: insets.top, backgroundColor: headerColor }} />
       <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         {showSplash ? (
@@ -247,6 +251,19 @@ function WebViewContent({
   webViewRef: React.RefObject<WebView | null>;
   onWebViewReady: () => void;
 }) {
+  const solidHeaderScript = `
+    (function() {
+      try {
+        const style = document.createElement('style');
+        style.innerHTML = 'header{background-color:#0B1F3F !important;backdrop-filter:none !important;}';
+        document.head.appendChild(style);
+      } catch (e) {
+        console.log('header style inject failed', e);
+      }
+    })();
+    true;
+  `;
+
   const handleMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
@@ -267,6 +284,8 @@ function WebViewContent({
         startInLoadingState={true}
         onLoadEnd={onWebViewReady}
         onMessage={handleMessage}
+        injectedJavaScriptBeforeContentLoaded={solidHeaderScript}
+        injectedJavaScript={solidHeaderScript}
         renderLoading={() => (
           <View style={styles.loadingContainer}>
             <LottieView
