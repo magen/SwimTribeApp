@@ -247,7 +247,7 @@ function SplashScreen({ onFinish }: { onFinish: () => void }) {
         <Video
           source={require('./assets/animations/splashAnimation_mov.mp4')}
           style={styles.video}
-          resizeMode="contain"
+          resizeMode="cover"
           muted
           onEnd={onFinish}
           onError={e => {
