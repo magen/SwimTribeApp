@@ -279,7 +279,7 @@ function WebViewContent({
     <SafeAreaView style={styles.webviewContainer} edges={['bottom']}>
       <WebView
         ref={webViewRef}
-        source={{ uri: 'https://swim-tribe.com/' }}
+        source={{ uri: 'http://192.168.68.104:5173/login' }}
         style={styles.webview}
         startInLoadingState={true}
         onLoadEnd={onWebViewReady}
