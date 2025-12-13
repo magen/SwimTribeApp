@@ -100,6 +100,18 @@ function AppInner() {
   const [isWebViewReady, setIsWebViewReady] = useState(false);
   const webViewRef = useRef<WebView | null>(null);
 
+  const sendAppContextToWeb = useCallback(() => {
+    if (webViewRef.current && isWebViewReady) {
+      webViewRef.current.postMessage(
+        JSON.stringify({
+          type: 'APP_CONTEXT',
+          isMobileApp: true,
+          platform: Platform.OS,
+        }),
+      );
+    }
+  }, [isWebViewReady]);
+
   const sendTokenToWeb = useCallback(
     (token: string) => {
       if (webViewRef.current && isWebViewReady) {
@@ -187,7 +199,10 @@ function AppInner() {
     if (fcmToken) {
       sendTokenToWeb(fcmToken);
     }
-  }, [fcmToken, sendTokenToWeb]);
+    if (isWebViewReady) {
+      sendAppContextToWeb();
+    }
+  }, [fcmToken, isWebViewReady, sendAppContextToWeb, sendTokenToWeb]);
 
   return (
     <>
@@ -205,6 +220,7 @@ function AppInner() {
             webViewRef={webViewRef}
             onWebViewReady={() => {
               setIsWebViewReady(true);
+              sendAppContextToWeb();
               if (fcmToken) {
                 sendTokenToWeb(fcmToken);
               }
