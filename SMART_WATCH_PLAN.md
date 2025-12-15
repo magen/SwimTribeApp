@@ -80,9 +80,16 @@
 9) Heart-rate display: show recent HR samples (value/time/source) via anchored fetch on Health screen. **Done — HR list wired on Health screen.**
 10) Swim summary: most recent swim workout with distance/duration/strokes/SWOLF/source on Health screen. **Done — swim stats shown on Health screen with pace/SWOLF/pool info.**
 11) Refresh controls: manual refresh + “reset anchors” on Health screen (reuse anchors). **Done — refresh + reset anchors on Health screen.**
-12) Normalize units and enrich workouts (pace, energy, pool length/location type; capture source/device).
-13) Training program linking: match fetched workouts to plan entries (by date/activity type) and surface matches/gaps.
+12) Normalize units and enrich workouts (pace, energy, pool length/location type; capture source/device). **Done — Health screen now normalizes distance/time/energy/pace, pool/location, device/source.**
+13) Training program linking: propose matches (same date ± small time window + activity type), mark as “optional match,” require user confirmation before marking as matched.
 14) Idempotent writes + schema: define local storage (workout headers, samples, metadata) and dedupe by UUID/source/time.
 15) Logging/export: debug toggle for ingestion logs and JSON export (QA scope).
 16) Validation: run pool/open-water sessions; compare vs Apple Fitness; record gaps.
 17) Summary/recommendations for next iteration (watchOS/live streaming decision).
+
+### Training plan linking (QA-first, incremental)
+13a) Add a QA-only dummy training plan on the Health screen (e.g., current week entries with activity + date/time).  
+13b) Implement `matchWorkoutsToPlan(workouts, plan)` using same date and a small time window + activity type; output “optional match” (not auto-confirmed).  
+13c) Add a “Match plan” button on the Health screen to run the matcher and show Matches/Optional/Missing; user can confirm an optional match to mark it as matched.  
+13d) Wire to real plan after login by swapping the dummy plan source for live plan data; keep matcher/display and confirmation flow the same.  
+13e) (Later) When confirmed, enrich training_completions with HealthKit data (distance/duration/HR/energy) for that session.

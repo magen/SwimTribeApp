@@ -31,6 +31,8 @@ type WorkoutDisplay = {
   durationSeconds?: number;
   pacePerKmSeconds?: number;
   device?: string;
+  energyKcal?: number;
+  sourceName?: string;
 };
 
 export function HealthScreen({ onExit }: Props) {
@@ -73,6 +75,16 @@ export function HealthScreen({ onExit }: Props) {
               ? rawDistance * 1000
               : rawDistance
           : undefined;
+      const rawEnergy = (w as any).totalEnergyBurned as number | undefined;
+      const rawEnergyUnit = (w as any).totalEnergyBurnedUnit as string | undefined;
+      const energyKcal =
+        rawEnergy != null
+          ? rawEnergyUnit === 'kcal'
+            ? rawEnergy
+            : rawEnergyUnit === 'cal'
+              ? rawEnergy / 1000
+              : rawEnergy
+          : undefined;
 
       let pacePerKmSeconds: number | undefined;
       if (distanceMeters && durationSeconds && distanceMeters > 0) {
@@ -87,6 +99,8 @@ export function HealthScreen({ onExit }: Props) {
         durationSeconds,
         pacePerKmSeconds,
         device: (w as any).device?.name,
+        energyKcal,
+        sourceName: (w as any).sourceRevision?.source?.name,
       };
     });
   };
@@ -263,7 +277,13 @@ export function HealthScreen({ onExit }: Props) {
                     Pace/km: {formatSeconds(w.pacePerKmSeconds)} ({w.pacePerKmSeconds.toFixed(1)}s)
                   </Text>
                 )}
+                {w.energyKcal != null && (
+                  <Text style={styles.caption}>
+                    Energy: {w.energyKcal.toFixed(0)} kcal
+                  </Text>
+                )}
                 {w.device && <Text style={styles.caption}>Device: {w.device}</Text>}
+                {w.sourceName && <Text style={styles.caption}>Source: {w.sourceName}</Text>}
               </View>
             ))
           )}
