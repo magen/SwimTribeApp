@@ -2733,6 +2733,34 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - RNCAsyncStorage (1.24.0):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - RNFBAnalytics (23.5.0):
     - FirebaseAnalytics/Core (= 12.4.0)
     - FirebaseAnalytics/IdentitySupport (= 12.4.0)
@@ -2848,6 +2876,7 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - "ReactNativeHealthkit (from `../node_modules/@kingstinct/react-native-healthkit`)"
+  - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNFBAnalytics (from `../node_modules/@react-native-firebase/analytics`)"
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBInAppMessaging (from `../node_modules/@react-native-firebase/in-app-messaging`)"
@@ -3035,6 +3064,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   ReactNativeHealthkit:
     :path: "../node_modules/@kingstinct/react-native-healthkit"
+  RNCAsyncStorage:
+    :path: "../node_modules/@react-native-async-storage/async-storage"
   RNFBAnalytics:
     :path: "../node_modules/@react-native-firebase/analytics"
   RNFBApp:
@@ -3144,6 +3175,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 878add6c7d8ff8cea87697c44d29c03b79b6f2d9
   ReactCommon: 804dc80944fa90b86800b43c871742ec005ca424
   ReactNativeHealthkit: 62eb30696a74c4991a10e423371cc6c8c9559f2f
+  RNCAsyncStorage: 01e4301688a611936e3644746ffe3325d3181952
   RNFBAnalytics: c8f3d38ea6cb396cac0265d9b077b9a98a7a0c9f
   RNFBApp: 255fa19a91d6c1309e021ee75d5d209754e5961b
   RNFBInAppMessaging: 57339543de7dad84a16fc0063918a0d49489156d
@@ -3153,6 +3185,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: 689c8e04277f3ad631e60fe2a08e41d411daf8eb
 
-PODFILE CHECKSUM: 215270810980e7fdd46bd238c722209410313639
+PODFILE CHECKSUM: ed3bc93747e15aa8bd7c71603ff1c98520cae72b
 
 COCOAPODS: 1.16.2

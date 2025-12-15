@@ -6,6 +6,7 @@ import {
   Pressable,
   Platform,
   Linking,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as healthkit from '@kingstinct/react-native-healthkit';
@@ -15,6 +16,11 @@ import {
   type ObjectTypeIdentifier,
   type SampleTypeIdentifierWriteable,
 } from '@kingstinct/react-native-healthkit/types';
+import {
+  runAnchoredFetches,
+  getAnchors,
+  enableBackgroundObservers,
+} from '../healthkit/service';
 
 type StatusKind = AuthorizationStatus | 'error' | 'read-only';
 
@@ -71,16 +77,20 @@ const requestStatusLabel = (
   }
 };
 
-type Props = { onExit: () => void };
+type Props = { onExit: () => void; onOpenHealth?: () => void };
 
-export function QAScreen({ onExit }: Props) {
+export function QAScreen({ onExit, onOpenHealth }: Props) {
   const [statuses, setStatuses] = useState<Record<string, StatusKind>>({});
   const [requestStatuses, setRequestStatuses] = useState<
     Record<string, AuthorizationRequestStatus | 'error'>
   >({});
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetchSummary, setLastFetchSummary] = useState<string | null>(null);
+  const [anchorsSummary, setAnchorsSummary] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
+  const [bgEnabled, setBgEnabled] = useState(false);
 
   const loadStatuses = useCallback(async () => {
     if (Platform.OS !== 'ios') {
@@ -129,6 +139,42 @@ export function QAScreen({ onExit }: Props) {
   useEffect(() => {
     loadStatuses();
   }, [loadStatuses]);
+
+  const refreshAnchorsSummary = useCallback(async () => {
+    try {
+      const anchors = await getAnchors();
+      setAnchorsSummary(JSON.stringify(anchors, null, 2));
+    } catch (err: any) {
+      setAnchorsSummary(`Failed to load anchors: ${err?.message || err}`);
+    }
+  }, []);
+
+  const runFetch = useCallback(async () => {
+    setFetching(true);
+    setLastFetchSummary(null);
+    try {
+      const result = await runAnchoredFetches();
+      const summary = `Workouts: ${result.workouts?.length ?? 0}, Heart rates: ${result.heartRates?.length ?? 0}, Anchors: ${JSON.stringify(result.nextAnchors)}`;
+      setLastFetchSummary(summary);
+      setAnchorsSummary(JSON.stringify(result.nextAnchors, null, 2));
+    } catch (err: any) {
+      setLastFetchSummary(`Fetch failed: ${err?.message || err}`);
+    } finally {
+      setFetching(false);
+    }
+  }, []);
+
+  const enableBg = useCallback(async () => {
+    setFetching(true);
+    try {
+      await enableBackgroundObservers();
+      setBgEnabled(true);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to enable background observers');
+    } finally {
+      setFetching(false);
+    }
+  }, []);
 
   const requestPermissions = useCallback(async () => {
     if (Platform.OS !== 'ios') {
@@ -208,12 +254,56 @@ export function QAScreen({ onExit }: Props) {
               {requesting ? 'Requesting…' : 'Request all'}
             </Text>
           </Pressable>
+          {onOpenHealth && (
+            <Pressable
+              style={styles.qaButton}
+              onPress={onOpenHealth}
+            >
+              <Text style={styles.qaButtonText}>Open Health debug</Text>
+            </Pressable>
+          )}
+          <Pressable
+            style={[
+              styles.qaButton,
+              fetching ? styles.qaButtonDisabled : undefined,
+            ]}
+            onPress={enableBg}
+            disabled={fetching || bgEnabled}
+          >
+            <Text style={styles.qaButtonText}>
+              {bgEnabled ? 'Background enabled' : fetching ? 'Enabling…' : 'Enable background observers'}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.qaButton,
+              fetching ? styles.qaButtonDisabled : undefined,
+            ]}
+            onPress={runFetch}
+            disabled={fetching}
+          >
+            <Text style={styles.qaButtonText}>
+              {fetching ? 'Fetching…' : 'Fetch workouts + HR (anchored)'}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.qaButton, styles.qaSecondaryButton]}
+            onPress={refreshAnchorsSummary}
+          >
+            <Text style={styles.qaButtonText}>Show anchors</Text>
+          </Pressable>
           <Pressable
             style={[styles.qaButton, styles.qaSecondaryButton]}
             onPress={() => Linking.openURL('x-apple-health://')}
           >
             <Text style={styles.qaButtonText}>Open Health app</Text>
           </Pressable>
+          {lastFetchSummary && (
+            <Text style={styles.qaCaption}>Last fetch: {lastFetchSummary}</Text>
+          )}
+          {anchorsSummary && (
+            <Text style={styles.qaCaption}>Anchors: {anchorsSummary}</Text>
+          )}
           <Text style={styles.qaCaption}>
             Requests read access for workouts, HR/HRV/VO2, rings, and swim
             metrics. Read-only types (HR/HRV/VO2/rings) will always show “Read-only”

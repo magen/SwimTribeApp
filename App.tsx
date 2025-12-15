@@ -15,6 +15,7 @@ import installations from '@react-native-firebase/installations';
 import { SplashScreen } from './src/components/SplashScreen';
 import { WebViewContent } from './src/components/WebViewContent';
 import { QAScreen } from './src/screens/QAScreen';
+import { HealthScreen } from './src/screens/HealthScreen';
 import {
   requestUserPermission,
   createNotificationChannel,
@@ -29,6 +30,7 @@ function AppInner() {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [isWebViewReady, setIsWebViewReady] = useState(false);
   const [showQAScreen, setShowQAScreen] = useState(false);
+  const [showHealthScreen, setShowHealthScreen] = useState(false);
   const webViewRef = useRef<WebView | null>(null);
 
   const sendAppContextToWeb = useCallback(() => {
@@ -146,8 +148,13 @@ function AppInner() {
       <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         {showSplash ? (
           <SplashScreen onFinish={() => setShowSplash(false)} />
+        ) : showHealthScreen ? (
+          <HealthScreen onExit={() => setShowHealthScreen(false)} />
         ) : showQAScreen ? (
-          <QAScreen onExit={() => setShowQAScreen(false)} />
+          <QAScreen
+            onExit={() => setShowQAScreen(false)}
+            onOpenHealth={() => setShowHealthScreen(true)}
+          />
         ) : (
           <>
             {__DEV__ && (

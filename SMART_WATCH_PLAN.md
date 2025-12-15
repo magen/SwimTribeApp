@@ -68,21 +68,21 @@
   - Findings on data quality to inform UI/insights priorities.
   - Callouts for watchOS app/live streaming needs and estimated effort.
 
-## Execution steps for v0 (small, sequential)
-1) Pick HealthKit bridge (`@kingstinct/react-native-healthkit` or `react-native-health`); document rationale and version pin. **Done — use `@kingstinct/react-native-healthkit` (TS-first, active, anchored/observer support).**
-2) Enable HealthKit capability in Xcode target; commit entitlements file. **Done — added `com.apple.developer.healthkit` to iOS entitlements.**
-3) Add `Info.plist` usage strings for health read/write, workouts, heart rate, activity. **Done — added HealthKit read/write usage descriptions.**
-4) Add/verify React Native linking for the chosen HealthKit library (pod install, iOS build sanity check). **Done — installed `@kingstinct/react-native-healthkit`, added NitroModules pod, and ran `pod install`.**
-5) Create a hidden QA screen entry point (dev-only) reachable from a known gesture/menu. **Done — long-press hotspot in App.tsx opens QA screen (dev only).**
-6) On the QA screen, render permission statuses for workout, heart rate, HRV, VO2 max, activity rings, swim metrics. **Done — statuses shown with read-only markers + read request state.**
-7) Implement permission request flows with clear error states (denied/restricted guidance). **Done — one-tap Request All wired; errors surfaced; link to Health app.**
-8) Scaffold ingestion service: structure + config for anchored queries and storing anchors (e.g., AsyncStorage).
-9) Implement anchored queries for workouts (headers + metadata) and heart rate samples; persist anchors.
-10) Add HKObserver/background delivery registration; fallback to periodic pull when unavailable.
-11) Normalize units (meters/seconds/kcal/bpm) and capture source/device info plus swim metadata (pool length, location type, strokes, SWOLF if present).
-12) Add idempotent write logic (dedupe by UUID/source/time range).
-13) Define local schema/tables/collections for workouts and samples; implement writes.
-14) Add lightweight ingestion logging with a debug toggle (QA builds only).
-15) Add debug export button on QA screen to emit recent payloads/logs to JSON with redaction.
-16) Run manual validation sessions (pool + open water); record results vs Apple Fitness; update validation notes.
-17) Summarize findings + gaps; list recommendations for UI/next iteration (watchOS/live streaming decision).
+## Execution plan (combined)
+1) Pick HealthKit bridge and pin version. **Done — `@kingstinct/react-native-healthkit` (TS-first, active, anchored/observer support).**
+2) Enable HealthKit capability; add usage strings. **Done — entitlements + Info.plist usage.**
+3) Link libraries (Pods/codegen) and confirm build. **Done — NitroModules + pod install.**
+4) QA entry: hidden dev-only menu to access debug tools. **Done — long-press hotspot opens QA.**
+5) Permissions UI: render statuses for workout/HR/HRV/VO2/rings/swim + request flows. **Done — statuses, Request All, link to Health app.**
+6) Ingestion scaffold: anchored queries + anchor storage. **Done — workouts/HR anchored fetch with persisted anchors.**
+7) Background delivery: HKObserver wiring (workouts/HR); fallback poller TBD. **Done (observer) — add poller if needed.**
+8) Health debug screen scaffold (reachable from QA); starts empty. **Done — Health debug screen accessible from QA.**
+9) Heart-rate display: show recent HR samples (value/time/source) via anchored fetch on Health screen. **Done — HR list wired on Health screen.**
+10) Swim summary: most recent swim workout with distance/duration/strokes/SWOLF/source on Health screen. **Done — swim stats shown on Health screen with pace/SWOLF/pool info.**
+11) Refresh controls: manual refresh + “reset anchors” on Health screen (reuse anchors). **Done — refresh + reset anchors on Health screen.**
+12) Normalize units and enrich workouts (pace, energy, pool length/location type; capture source/device).
+13) Training program linking: match fetched workouts to plan entries (by date/activity type) and surface matches/gaps.
+14) Idempotent writes + schema: define local storage (workout headers, samples, metadata) and dedupe by UUID/source/time.
+15) Logging/export: debug toggle for ingestion logs and JSON export (QA scope).
+16) Validation: run pool/open-water sessions; compare vs Apple Fitness; record gaps.
+17) Summary/recommendations for next iteration (watchOS/live streaming decision).

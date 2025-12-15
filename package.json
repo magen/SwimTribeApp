@@ -12,6 +12,7 @@
   "dependencies": {
     "@kingstinct/react-native-healthkit": "^13.0.0",
     "@notifee/react-native": "^9.1.8",
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-firebase/analytics": "^23.5.0",
     "@react-native-firebase/app": "^23.5.0",
     "@react-native-firebase/in-app-messaging": "^23.5.0",
