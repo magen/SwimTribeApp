@@ -33,6 +33,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSHealthShareUsageDescription</key>
+	<string>SwimTribe reads your Apple Health data (workouts, heart rate, and swim metrics) to import sessions from Apple Watch.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>SwimTribe writes workout and related health data you choose to share into Apple Health.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>RCTNewArchEnabled</key>

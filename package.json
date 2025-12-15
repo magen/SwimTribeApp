@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@kingstinct/react-native-healthkit": "^13.0.0",
     "@notifee/react-native": "^9.1.8",
     "@react-native-firebase/analytics": "^23.5.0",
     "@react-native-firebase/app": "^23.5.0",
@@ -21,6 +22,7 @@
     "lottie-react-native": "^7.3.4",
     "react": "19.1.1",
     "react-native": "0.82.1",
+    "react-native-nitro-modules": "^0.31.10",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-video": "^6.18.0",
     "react-native-webview": "^13.16.0"
