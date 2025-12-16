@@ -10,6 +10,49 @@ type Props = {
   onExit: () => void;
 };
 
+// QA-only dummy plan content from training_programs sample
+const DUMMY_PLAN_CONTENT = `{"sections": [{"id": "warmup", "sets": [{"id": "set-1765449143244", "steps": [{"id": "step-1765449152272", "note": "שחיית חתירה סטנדרטית", "style": "חתירה", "repeat": 1, "distance": 100, "paceZone": "Z1", "restAfterStep": ""}, {"id": "step-1765449190278", "note": "שחיית חזה סטנדרטית", "style": "חזה", "repeat": 1, "distance": 25, "paceZone": "Z1", "restAfterStep": ""}, {"id": "step-1765449196987", "note": "שחיית גב סטנדרטית\\t", "style": "שחיית גב", "repeat": 1, "distance": 25, "paceZone": "Z1", "restAfterStep": ""}], "title": "Set 1", "repeat": 2, "restAfterSet": ""}], "title": "Warm Up"}, {"id": "main", "sets": [{"id": "set-1765449215995", "steps": [{"id": "step-1765449237570", "note": "כל חזרה נעשית מהר יותר", "style": "חתירה מתגבר", "repeat": 2, "distance": 100, "paceZone": "Z3", "restAfterStep": "00:20"}, {"id": "step-1765449251839", "note": "כל חזרה נעשית מהר יותר", "style": "גב מתגבר", "repeat": 1, "distance": 100, "paceZone": "Z3", "restAfterStep": "00:10"}, {"id": "step-1765449262659", "note": "כל חזרה נעשית מהר יותר", "style": "חזה מתגבר", "repeat": 1, "distance": 50, "paceZone": "Z3", "restAfterStep": "00:10"}], "title": "Set 1", "repeat": 2, "restAfterSet": ""}, {"id": "set-1765449320841", "steps": [{"id": "step-1765449329510", "note": "שחיית חתירה סטנדרטית", "style": "חתירה", "repeat": 1, "distance": 25, "paceZone": "Z3", "restAfterStep": ""}, {"id": "step-1765449341988", "note": "שחיית פרפר סטנדרטית", "style": "פרפר", "repeat": 1, "distance": 25, "paceZone": "Z3", "restAfterStep": ""}, {"id": "step-1765449345893", "note": "שחיית חזה סטנדרטית", "style": "חזה", "repeat": 1, "distance": 25, "paceZone": "Z3", "restAfterStep": ""}, {"id": "step-1765449352755", "note": "שחיית גב סטנדרטית\\t", "style": "שחיית גב", "repeat": 1, "distance": 25, "paceZone": "Z3", "restAfterStep": ""}], "title": "Set 2", "repeat": 6, "restAfterSet": "01:00"}, {"id": "set-1765449390262", "steps": [{"id": "step-1765449399357", "note": "תרגול בעיטות עם מצוף", "style": "בעיטות עם מצוף", "repeat": 1, "distance": 50, "paceZone": "Z1", "restAfterStep": ""}, {"id": "step-1765449408236", "note": "שחיית דולפין", "style": "שחיית דולפין", "repeat": 1, "distance": 25, "paceZone": "Z1", "restAfterStep": ""}, {"id": "step-1765449417820", "note": "שיפור מיקום הידיים ותחושת המים", "style": "סקאולינג", "repeat": 1, "distance": 25, "paceZone": "Z1", "restAfterStep": ""}], "title": "Set 3", "repeat": 4, "restAfterSet": ""}], "title": "Main Set"}, {"id": "cooldown", "sets": [{"id": "set-1765449438056", "steps": [{"id": "step-1765449445947", "note": "שחייה קלה להתאוששות", "style": "התאוששות", "repeat": 1, "distance": 200, "paceZone": "Z1", "restAfterStep": ""}, {"id": "step-1765449472316", "note": "שיחרור", "style": "חזה", "repeat": 1, "distance": 50, "paceZone": "Z1", "restAfterStep": ""}], "title": "Set 1", "repeat": 1, "restAfterSet": ""}], "title": "Cool Down"}]}`;
+
+function computePlannedDistanceMeters(): number {
+  try {
+    const parsed = JSON.parse(DUMMY_PLAN_CONTENT);
+    let sum = 0;
+    (parsed.sections || []).forEach((section: any) => {
+      (section.sets || []).forEach((set: any) => {
+        const setRepeats = set.repeat || 1;
+        (set.steps || []).forEach((step: any) => {
+          const stepRepeat = step.repeat || 1;
+          const distance = step.distance || 0;
+          sum += distance * stepRepeat * setRepeats;
+        });
+      });
+    });
+    return sum;
+  } catch (err) {
+    console.warn('[Health] failed to parse planned distance', err);
+    return 0;
+  }
+}
+type TrainingPlanEntry = {
+  id: string;
+  title: string;
+  trainingDate: Date; // scheduled UTC parsed to local Date
+  estimatedMinutes?: number;
+  plannedDistanceMeters?: number;
+};
+
+type OptionalMatch = {
+  planId: string;
+  workoutIdx: number;
+  label: string;
+  start: string;
+  distanceMeters?: number;
+  durationSeconds?: number;
+  device?: string;
+  sourceName?: string;
+  reason: string;
+};
+
 type SwimDetails = {
   distanceMeters?: number;
   strokeCount?: number;
@@ -35,14 +78,20 @@ type WorkoutDisplay = {
   sourceName?: string;
 };
 
-export function HealthScreen({ onExit }: Props) {
+export function HealthScreen({ onExit, planEntriesOverride, onConfirmMatch }: Props) {
   const [hrSamples, setHrSamples] = useState<QuantitySample[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutDisplay[]>([]);
+  const [rawWorkouts, setRawWorkouts] = useState<Workout[]>([]);
   const [lastSwim, setLastSwim] = useState<Workout | null>(null);
   const [swimDetails, setSwimDetails] = useState<SwimDetails | null>(null);
   const [anchors, setAnchors] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('Idle');
   const [loading, setLoading] = useState(false);
+  const [planEntries, setPlanEntries] = useState<TrainingPlanEntry[]>(() =>
+    planEntriesOverride && planEntriesOverride.length > 0 ? planEntriesOverride : [],
+  );
+  const [optionalMatches, setOptionalMatches] = useState<OptionalMatch[]>([]);
+  const [confirmedMatches, setConfirmedMatches] = useState<Record<string, number>>({});
 
   const loadAnchors = useCallback(async () => {
     const a = await getAnchors();
@@ -115,6 +164,7 @@ export function HealthScreen({ onExit }: Props) {
         const bTime = new Date((b as any).endDate ?? (b as any).startDate ?? 0).getTime();
         return bTime - aTime;
       });
+      setRawWorkouts(sortedWorkouts);
       const sortedHR = (result.heartRates ?? []).sort((a, b) => {
         const aTime = new Date(a.endDate ?? a.startDate ?? 0).getTime();
         const bTime = new Date(b.endDate ?? b.startDate ?? 0).getTime();
@@ -199,9 +249,94 @@ export function HealthScreen({ onExit }: Props) {
     setStatus('Anchors reset; next fetch will read all');
   }, []);
 
+  const matchWorkoutsToPlan = useCallback(() => {
+    const WINDOW_MS = 4 * 60 * 60 * 1000; // ±4h
+    const swims = rawWorkouts.filter(w => (w as any).workoutActivityType === 46);
+    const nextMatches: OptionalMatch[] = [];
+
+    planEntries.forEach(plan => {
+      const planStart = plan.trainingDate.getTime();
+      const planDayStart = new Date(plan.trainingDate);
+      planDayStart.setHours(0, 0, 0, 0);
+      const planDayEnd = planDayStart.getTime() + 24 * 60 * 60 * 1000;
+
+      let matched = false;
+      swims.forEach((w, idx) => {
+        const startMs = new Date((w as any).startDate ?? 0).getTime();
+        if (startMs < planDayStart.getTime() || startMs > planDayEnd) {
+          return;
+        }
+        const delta = Math.abs(startMs - planStart);
+        if (delta > WINDOW_MS) {
+          return;
+        }
+
+        const durationSeconds = (w as any).duration?.quantity as number | undefined;
+        const distanceMeters = (w as any).totalDistance as number | undefined;
+        const reasonParts = [`Δtime ${(delta / (60 * 1000)).toFixed(0)} min`];
+        if (plan.estimatedMinutes && durationSeconds) {
+          const diff = Math.abs(durationSeconds / 60 - plan.estimatedMinutes);
+          reasonParts.push(`Δduration ${diff.toFixed(1)} min`);
+        }
+        if (plan.plannedDistanceMeters && distanceMeters) {
+          const diff = Math.abs(distanceMeters - plan.plannedDistanceMeters);
+          reasonParts.push(`Δdist ${diff.toFixed(0)} m`);
+        }
+
+        nextMatches.push({
+          planId: plan.id,
+          workoutIdx: idx,
+          label: plan.title,
+          start: new Date((w as any).startDate).toLocaleString(),
+          distanceMeters,
+          durationSeconds,
+          device: (w as any).device?.name,
+          sourceName: (w as any).sourceRevision?.source?.name,
+          reason: reasonParts.join(', '),
+        });
+        matched = true;
+      });
+
+      if (!matched) {
+        nextMatches.push({
+          planId: plan.id,
+          workoutIdx: -1,
+          label: plan.title,
+          start: plan.trainingDate.toLocaleString(),
+          reason: 'No swim found in window',
+        });
+      }
+    });
+
+    setOptionalMatches(nextMatches);
+  }, [planEntries, rawWorkouts]);
+
+  const confirmMatch = (planId: string, workoutIdx: number) => {
+    setConfirmedMatches(prev => ({ ...prev, [planId]: workoutIdx }));
+    onConfirmMatch?.(planId, workoutIdx);
+  };
+
   useEffect(() => {
     loadAnchors();
   }, [loadAnchors]);
+
+  // Update plan entries when override changes
+  useEffect(() => {
+    if (planEntriesOverride && planEntriesOverride.length > 0) {
+      console.log('[Health] received planEntriesOverride', planEntriesOverride.length);
+      setPlanEntries(planEntriesOverride);
+    }
+  }, [planEntriesOverride]);
+
+  // Auto-run matcher when we have overrides and workouts fetched
+  useEffect(() => {
+    console.log('[Health] useEffect triggered with planEntriesOverride:', planEntriesOverride);
+    console.log('[Health] useEffect triggered with rawWorkouts:', rawWorkouts.length);
+    if (planEntriesOverride && planEntriesOverride.length > 0 && rawWorkouts.length > 0) {
+      console.log('[Health] auto-matching with overrides and rawWorkouts', rawWorkouts.length);
+      matchWorkoutsToPlan();
+    }
+  }, [planEntriesOverride, rawWorkouts, matchWorkoutsToPlan]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -228,6 +363,68 @@ export function HealthScreen({ onExit }: Props) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Anchors</Text>
           <Text style={styles.code}>{anchors ?? 'None'}</Text>
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Training plan (QA dummy)</Text>
+          {planEntries.map(plan => (
+            <View key={plan.id} style={styles.itemRow}>
+              <Text style={styles.itemKey}>{plan.title}</Text>
+              <Text style={styles.itemValue}>
+                Scheduled: {plan.trainingDate.toLocaleString()}
+              </Text>
+              {plan.estimatedMinutes != null && (
+                <Text style={styles.caption}>
+                  Planned duration: {plan.estimatedMinutes} min
+                </Text>
+              )}
+              {plan.plannedDistanceMeters != null && (
+                <Text style={styles.caption}>
+                  Planned distance: {plan.plannedDistanceMeters.toFixed(0)} m
+                </Text>
+              )}
+            </View>
+          ))}
+          <Pressable style={styles.button} onPress={matchWorkoutsToPlan}>
+            <Text style={styles.buttonText}>Match plan</Text>
+          </Pressable>
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Matches (optional)</Text>
+          {optionalMatches.length === 0 ? (
+            <Text style={styles.caption}>Run "Match plan" to see proposed matches.</Text>
+          ) : (
+            optionalMatches.map((m, idx) => (
+              <View key={`${m.planId}-${idx}`} style={styles.itemRow}>
+                <Text style={styles.itemKey}>{m.label}</Text>
+                <Text style={styles.itemValue}>{m.start}</Text>
+                {m.distanceMeters != null && (
+                  <Text style={styles.caption}>Distance: {m.distanceMeters.toFixed(0)} m</Text>
+                )}
+                {m.durationSeconds != null && (
+                  <Text style={styles.caption}>
+                    Duration: {formatSeconds(m.durationSeconds)} ({m.durationSeconds.toFixed(0)}s)
+                  </Text>
+                )}
+                {m.device && <Text style={styles.caption}>Device: {m.device}</Text>}
+                {m.sourceName && <Text style={styles.caption}>Source: {m.sourceName}</Text>}
+                <Text style={styles.caption}>Reason: {m.reason}</Text>
+                {m.workoutIdx >= 0 ? (
+                  confirmedMatches[m.planId] === m.workoutIdx ? (
+                    <Text style={styles.caption}>Status: Confirmed</Text>
+                  ) : (
+                    <Pressable
+                      style={[styles.button, styles.smallButton]}
+                      onPress={() => confirmMatch(m.planId, m.workoutIdx)}
+                    >
+                      <Text style={styles.buttonText}>Confirm match</Text>
+                    </Pressable>
+                  )
+                ) : (
+                  <Text style={styles.caption}>Status: Missing</Text>
+                )}
+              </View>
+            ))
+          )}
         </View>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Recent Heart Rate</Text>
@@ -412,6 +609,11 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D9DFE7',
     gap: 8,
+  },
+  smallButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginTop: 6,
   },
   cardTitle: {
     fontSize: 16,

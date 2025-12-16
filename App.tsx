@@ -31,6 +31,7 @@ function AppInner() {
   const [isWebViewReady, setIsWebViewReady] = useState(false);
   const [showQAScreen, setShowQAScreen] = useState(false);
   const [showHealthScreen, setShowHealthScreen] = useState(false);
+  const [planEntriesFromWeb, setPlanEntriesFromWeb] = useState<any[]>([]);
   const webViewRef = useRef<WebView | null>(null);
 
   const sendAppContextToWeb = useCallback(() => {
@@ -149,7 +150,10 @@ function AppInner() {
         {showSplash ? (
           <SplashScreen onFinish={() => setShowSplash(false)} />
         ) : showHealthScreen ? (
-          <HealthScreen onExit={() => setShowHealthScreen(false)} />
+          <HealthScreen
+            onExit={() => setShowHealthScreen(false)}
+            planEntriesOverride={planEntriesFromWeb}
+          />
         ) : showQAScreen ? (
           <QAScreen
             onExit={() => setShowQAScreen(false)}
@@ -174,6 +178,21 @@ function AppInner() {
                 }
               }}
               onLog={(...args) => console.log('[WEBVIEW]', ...args)}
+              onPlanTrainings={(trainings) => {
+                console.log('[WEBVIEW] received planTrainings', trainings);
+                try {
+                  const mapped = (trainings || []).map((t: any) => ({
+                    id: t.id,
+                    title: t.title,
+                    trainingDate: new Date(t.training_date),
+                    estimatedMinutes: t.estimated_duration,
+                  }));
+                  setPlanEntriesFromWeb(mapped);
+                  setShowHealthScreen(true);
+                } catch (err) {
+                  console.warn('[WEBVIEW] failed to map planTrainings', err);
+                }
+              }}
             />
           </>
         )}

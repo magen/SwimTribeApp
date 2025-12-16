@@ -81,15 +81,17 @@
 10) Swim summary: most recent swim workout with distance/duration/strokes/SWOLF/source on Health screen. **Done — swim stats shown on Health screen with pace/SWOLF/pool info.**
 11) Refresh controls: manual refresh + “reset anchors” on Health screen (reuse anchors). **Done — refresh + reset anchors on Health screen.**
 12) Normalize units and enrich workouts (pace, energy, pool length/location type; capture source/device). **Done — Health screen now normalizes distance/time/energy/pace, pool/location, device/source.**
-13) Training program linking: propose matches (same date ± small time window + activity type), mark as “optional match,” require user confirmation before marking as matched.
+13) Training program linking: propose matches (same date ± small time window + activity type), mark as “optional match,” require user confirmation before marking as matched. **In progress — QA-only matcher on Health screen with optional matches and confirmations.**
 14) Idempotent writes + schema: define local storage (workout headers, samples, metadata) and dedupe by UUID/source/time.
 15) Logging/export: debug toggle for ingestion logs and JSON export (QA scope).
 16) Validation: run pool/open-water sessions; compare vs Apple Fitness; record gaps.
 17) Summary/recommendations for next iteration (watchOS/live streaming decision).
 
 ### Training plan linking (QA-first, incremental)
-13a) Add a QA-only dummy training plan on the Health screen (e.g., current week entries with activity + date/time).  
-13b) Implement `matchWorkoutsToPlan(workouts, plan)` using same date and a small time window + activity type; output “optional match” (not auto-confirmed).  
-13c) Add a “Match plan” button on the Health screen to run the matcher and show Matches/Optional/Missing; user can confirm an optional match to mark it as matched.  
-13d) Wire to real plan after login by swapping the dummy plan source for live plan data; keep matcher/display and confirmation flow the same.  
-13e) (Later) When confirmed, enrich training_completions with HealthKit data (distance/duration/HR/energy) for that session.
+13a) Add a QA-only dummy training plan on the Health screen (e.g., current week entries with activity + date/time). **Done — dummy plan seeded.**  
+13b) Implement `matchWorkoutsToPlan(workouts, plan)` using same date and a small time window + activity type; output “optional match” (not auto-confirmed). **Done — matcher runs locally with optional matches.**  
+13c) Add a “Match plan” button on the Health screen to run the matcher and show Matches/Optional/Missing; user can confirm an optional match to mark it as matched. **Done — UI supports manual confirm.**  
+13d) Wire to real plan after login by swapping the dummy plan source for live plan data; keep matcher/display and confirmation flow the same. **In progress — Health screen accepts plan overrides/confirm callbacks; needs real plan feed + dashboard trigger.**  
+13e) When confirmed, send the match upstream and enrich training_completions with HealthKit stats (distance/duration/HR/energy) for that session. **Pending — hook confirmations to backend.**
+13f) Dashboard trigger: after login and plan load, fetch recent workouts (anchored), run matcher locally, and surface a banner/modal for optional matches; user approves per-match before confirming. **Pending — implement in app shell/dashboard.**
+13g) Data flow: send trainings from server to app; perform matching locally; only send confirmed matches/stats back to server. **Pending — wiring to backend.**

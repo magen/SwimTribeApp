@@ -8,9 +8,10 @@ type Props = {
   webViewRef: React.RefObject<WebView | null>;
   onWebViewReady: () => void;
   onLog?: (...args: any[]) => void;
+  onPlanTrainings?: (trainings: any[]) => void;
 };
 
-export function WebViewContent({ webViewRef, onWebViewReady, onLog }: Props) {
+export function WebViewContent({ webViewRef, onWebViewReady, onLog, onPlanTrainings }: Props) {
   const solidHeaderScript = `
     (function() {
       try {
@@ -29,6 +30,9 @@ export function WebViewContent({ webViewRef, onWebViewReady, onLog }: Props) {
       const data = JSON.parse(event.nativeEvent.data);
       if (data?.type === 'log') {
         onLog?.(...data.payload);
+      } else if (data?.type === 'planTrainings') {
+        console.log('Received planTrainings message', data.payload);
+        onPlanTrainings?.(data.trainings || []);
       }
     } catch (err) {
       console.warn('Bad message from webview', err);
@@ -39,7 +43,7 @@ export function WebViewContent({ webViewRef, onWebViewReady, onLog }: Props) {
     <SafeAreaView style={styles.webviewContainer} edges={['bottom']}>
       <WebView
         ref={webViewRef}
-        source={{ uri: 'http://192.168.1.25:5173/login' }}
+        source={{ uri: 'http://192.168.68.110:5173/login' }}
         style={styles.webview}
         startInLoadingState={true}
         onLoadEnd={onWebViewReady}
