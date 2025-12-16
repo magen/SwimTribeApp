@@ -7,6 +7,7 @@ import {
   Platform,
   Linking,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as healthkit from '@kingstinct/react-native-healthkit';
@@ -21,6 +22,7 @@ import {
   getAnchors,
   enableBackgroundObservers,
 } from '../healthkit/service';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type StatusKind = AuthorizationStatus | 'error' | 'read-only';
 
@@ -176,6 +178,15 @@ export function QAScreen({ onExit, onOpenHealth }: Props) {
     }
   }, []);
 
+  const clearHealthPromptState = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem('@health/prompt_state');
+      Alert.alert('Cleared', 'Health prompt state has been cleared from storage.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to clear prompt state');
+    }
+  }, []);
+
   const requestPermissions = useCallback(async () => {
     if (Platform.OS !== 'ios') {
       setError('HealthKit is iOS-only');
@@ -285,6 +296,12 @@ export function QAScreen({ onExit, onOpenHealth }: Props) {
             <Text style={styles.qaButtonText}>
               {fetching ? 'Fetching…' : 'Fetch workouts + HR (anchored)'}
             </Text>
+          </Pressable>
+          <Pressable
+            style={styles.qaButton}
+            onPress={clearHealthPromptState}
+          >
+            <Text style={styles.qaButtonText}>Clear health prompt state</Text>
           </Pressable>
           <Pressable
             style={[styles.qaButton, styles.qaSecondaryButton]}

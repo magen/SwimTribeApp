@@ -25,6 +25,25 @@ export async function initHealthKit() {
   });
 }
 
+/**
+ * Request the minimal permissions we need for matching: workouts + swim distance/energy.
+ */
+export async function requestWorkoutPermissions() {
+  const READ_WORKOUTS: any[] = [
+    'HKWorkoutTypeIdentifier',
+    'HKQuantityTypeIdentifierDistanceSwimming',
+    'HKQuantityTypeIdentifierSwimmingStrokeCount',
+    'HKQuantityTypeIdentifierActiveEnergyBurned',
+  ];
+
+  const SHARE_WORKOUTS: any[] = ['HKWorkoutTypeIdentifier'];
+
+  return healthkit.requestAuthorization({
+    toRead: READ_WORKOUTS,
+    toShare: SHARE_WORKOUTS,
+  });
+}
+
 export async function getAnchors() {
   return loadAnchors();
 }

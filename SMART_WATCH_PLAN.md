@@ -95,3 +95,12 @@
 13e) When confirmed, send the match upstream and enrich training_completions with HealthKit stats (distance/duration/HR/energy) for that session. **Pending — hook confirmations to backend.**
 13f) Dashboard trigger: after login and plan load, fetch recent workouts (anchored), run matcher locally, and surface a banner/modal for optional matches; user approves per-match before confirming. **Pending — implement in app shell/dashboard.**
 13g) Data flow: send trainings from server to app; perform matching locally; only send confirmed matches/stats back to server. **Pending — wiring to backend.**
+
+### New user-facing matching flow (replace QA screen)
+- **Permission on launch**: after login, prompt for HealthKit workouts (skip HR for now). Block the flow if denied; show CTA to enable.
+- **Auto refresh**: once permission is granted, automatically run anchored fetch for workouts and update anchors.
+- **Plan intake**: receive last-7-days trainings from the web app and store as plan entries.
+- **Match trigger**: when both workouts and plan entries are present, run the matcher; only proceed if candidates exist.
+- **Modal UI**: if candidates exist, open a modal (user-facing screen) showing per-training match details (title, scheduled time, matched workout time, distance/duration deltas, device/source). Allow dismiss.
+- **Actions**: Confirm (mark match + send confirmation/stats upstream), or dismiss/ignore for now. Optionally provide “Reset/Retry matching” to re-run after a new fetch.
+- **Resilience**: add logs for permission result, fetch status, match start/end, modal open/close; handle empty states (no permission → CTA, no workouts/plan → wait/retry).
