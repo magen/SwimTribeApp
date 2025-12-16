@@ -12,6 +12,17 @@ type Props = {
 };
 
 export function WebViewContent({ webViewRef, onWebViewReady, onLog, onPlanTrainings }: Props) {
+  const mobileFlagScript = `
+    (function() {
+      try {
+        localStorage.setItem('is_mobile_app', 'true');
+      } catch (e) {
+        console.log('failed to set is_mobile_app flag', e);
+      }
+    })();
+    true;
+  `;
+
   const solidHeaderScript = `
     (function() {
       try {
@@ -48,7 +59,7 @@ export function WebViewContent({ webViewRef, onWebViewReady, onLog, onPlanTraini
         startInLoadingState={true}
         onLoadEnd={onWebViewReady}
         onMessage={handleMessage}
-        injectedJavaScriptBeforeContentLoaded={solidHeaderScript}
+        injectedJavaScriptBeforeContentLoaded={`${mobileFlagScript}\n${solidHeaderScript}`}
         injectedJavaScript={solidHeaderScript}
         renderLoading={() => (
           <View style={styles.loadingContainer}>

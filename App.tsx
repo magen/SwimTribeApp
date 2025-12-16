@@ -47,7 +47,10 @@ function AppInner() {
   const webViewRef = useRef<WebView | null>(null);
 
   const sendAppContextToWeb = useCallback(() => {
+    // Send app context to webview
+    console.log('Sending app context to webview', { isWebViewReady });
     if (webViewRef.current && isWebViewReady) {
+      console.log('Posting APP_CONTEXT message to webview');
       webViewRef.current.postMessage(
         JSON.stringify({
           type: 'APP_CONTEXT',
@@ -154,9 +157,13 @@ function AppInner() {
   }, []);
 
   useEffect(() => {
+    // Send FCM token and app context to webview when ready
+    console.log('App effect: fcmToken or isWebViewReady changed', { fcmToken, isWebViewReady });
     if (fcmToken) {
       sendTokenToWeb(fcmToken);
     }
+    // Send app context when webview is ready
+    console.log('Checking to send app context to webview', { isWebViewReady });
     if (isWebViewReady) {
       sendAppContextToWeb();
     }
