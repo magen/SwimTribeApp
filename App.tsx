@@ -169,6 +169,39 @@ function AppInner() {
     }
   }, [fcmToken, isWebViewReady, sendAppContextToWeb, sendTokenToWeb]);
 
+  const sendMatchConfirmationToWeb = useCallback(
+    (candidate: any) => {
+      if (!webViewRef.current || !isWebViewReady) {
+        console.warn('[WEBVIEW] not ready to send match confirmation');
+        return;
+      }
+      const workout = workoutsFetched[candidate.workoutIdx];
+      const payload = {
+        planId: candidate.planId,
+        planTitle: candidate.planTitle,
+        planStart: candidate.planStart,
+        workoutIdx: candidate.workoutIdx,
+        workoutStart: candidate.workoutStart,
+        distanceMeters: candidate.distanceMeters,
+        durationSeconds: candidate.durationSeconds,
+        energyKcal: candidate.energyKcal,
+        strokeCount: candidate.strokeCount,
+        swolfApprox: candidate.swolfApprox,
+        reason: candidate.reason,
+        workout,
+      };
+      console.log('workout', workout);
+      console.log('[WEBVIEW] sending MATCH_CONFIRMED', payload);
+      webViewRef.current.postMessage(
+        JSON.stringify({
+          type: 'MATCH_CONFIRMED',
+          payload,
+        }),
+      );
+    },
+    [isWebViewReady, workoutsFetched],
+  );
+
   // Prompt for workouts permission once plan data arrives (unless dismissed/granted)
   useEffect(() => {
     if (
@@ -343,7 +376,8 @@ function AppInner() {
                   <Pressable
                     style={[styles.qaButton, { marginTop: 8 }]}
                     onPress={() => {
-                      // TODO: implement confirmation handling
+                      sendMatchConfirmationToWeb(c);
+                      setShowMatchModal(false);
                     }}
                   >
                     <Text style={styles.qaButtonText}>Confirm</Text>
@@ -426,6 +460,24 @@ function matchWorkoutsToPlan(workouts: any[], plans: any[]) {
     return rawDistance;
   };
 
+  const normalizeEnergyKcal = (w: any) => {
+    console.log('Normalizing energy for workout', w);
+    console.log('Raw totalEnergyBurned:', (w as any).totalEnergyBurned);
+    console.log('Raw totalEnergyBurnedUnit:', (w as any).totalEnergyBurnedUnit);
+    const rawEnergy = (w as any).totalEnergyBurned as number | undefined;
+    const rawUnit = (w as any).totalEnergyBurnedUnit as string | undefined;
+    if (rawEnergy == null) return undefined;
+    if (rawUnit === 'kcal') return rawEnergy;
+    if (rawUnit === 'cal') return rawEnergy / 1000;
+    return rawEnergy;
+  };
+
+  const normalizeStrokeCount = (w: any) => {
+    const raw = (w as any).totalSwimmingStrokeCount as number | undefined;
+    if (raw == null) return undefined;
+    return raw;
+  };
+
   const candidates: any[] = [];
 
   plans.forEach((plan: any) => {
@@ -445,6 +497,8 @@ function matchWorkoutsToPlan(workouts: any[], plans: any[]) {
 
       const durationSeconds = (w as any).duration?.quantity as number | undefined;
       const distanceMeters = normalizeDistanceMeters(w);
+      const energyKcal = normalizeEnergyKcal(w);
+      const strokeCount = normalizeStrokeCount(w);
       const reasonParts = [`Δtime ${(delta / (60 * 1000)).toFixed(0)} min`];
       if (plan.estimatedMinutes && durationSeconds) {
         const diff = Math.abs(durationSeconds / 60 - plan.estimatedMinutes);
@@ -452,6 +506,11 @@ function matchWorkoutsToPlan(workouts: any[], plans: any[]) {
       }
       if (distanceMeters != null) {
         reasonParts.push(`distance ${distanceMeters.toFixed(0)} m`);
+      }
+      let swolfApprox: number | undefined;
+      if (strokeCount && distanceMeters && distanceMeters > 0 && durationSeconds) {
+        const strokesPer100m = (strokeCount / distanceMeters) * 100;
+        swolfApprox = (durationSeconds / distanceMeters) * 100 + strokesPer100m;
       }
 
       candidates.push({
@@ -462,6 +521,9 @@ function matchWorkoutsToPlan(workouts: any[], plans: any[]) {
          workoutStart: new Date((w as any).startDate).toLocaleString(),
          distanceMeters,
          durationSeconds,
+         energyKcal,
+         strokeCount,
+         swolfApprox,
          reason: reasonParts.join(', '),
       });
       

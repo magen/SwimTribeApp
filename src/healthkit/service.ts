@@ -70,6 +70,46 @@ export async function runAnchoredFetches(): Promise<IngestionResult> {
     // We keep the proxy objects for now; can map to plain objects later if needed.
     workouts.push(...(((workoutResp as any)?.workouts as Workout[]) ?? []));
     nextAnchors.workouts = (workoutResp as any)?.newAnchor;
+
+    // Enrich swim workouts with derived statistics so downstream code has distance/energy/strokes available.
+    await Promise.all(
+      workouts.map(async (w) => {
+        const isSwim = (w as any).workoutActivityType === 46;
+        const hasStats = typeof (w as any).getStatistic === 'function';
+        if (!isSwim || !hasStats) return;
+        try {
+          const distance = await (w as any).getStatistic(
+            'HKQuantityTypeIdentifierDistanceSwimming',
+            'm',
+          );
+          const energy = await (w as any).getStatistic(
+            'HKQuantityTypeIdentifierActiveEnergyBurned',
+            'kcal',
+          );
+          const strokes = await (w as any).getStatistic(
+            'HKQuantityTypeIdentifierSwimmingStrokeCount',
+            'count',
+          );
+          const distanceMeters = distance?.sumQuantity?.quantity;
+          if (distanceMeters != null) {
+            (w as any).totalDistance = distanceMeters;
+            (w as any).totalDistanceUnit = 'm';
+          }
+          const energyKcal = energy?.sumQuantity?.quantity;
+          if (energyKcal != null) {
+            (w as any).totalEnergyBurned = energyKcal;
+            (w as any).totalEnergyBurnedUnit = 'kcal';
+          }
+          const strokeCount = strokes?.sumQuantity?.quantity;
+          if (strokeCount != null) {
+            (w as any).totalSwimmingStrokeCount = strokeCount;
+            (w as any).totalSwimmingStrokeCountUnit = 'count';
+          }
+        } catch (err) {
+          console.warn('[HealthKit] failed to enrich swim workout stats', err);
+        }
+      }),
+    );
   } catch (err) {
     console.warn('[HealthKit] workout anchor query failed', err);
   }
