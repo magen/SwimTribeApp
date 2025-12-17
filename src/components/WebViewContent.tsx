@@ -54,7 +54,7 @@ export function WebViewContent({ webViewRef, onWebViewReady, onLog, onPlanTraini
     <SafeAreaView style={styles.webviewContainer} edges={['bottom']}>
       <WebView
         ref={webViewRef}
-        source={{ uri: 'http://192.168.68.110:5173/login' }}
+        source={{ uri: 'http://192.168.68.112:5173/login' }}
         style={styles.webview}
         startInLoadingState={true}
         onLoadEnd={onWebViewReady}
