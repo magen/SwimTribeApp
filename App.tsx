@@ -39,6 +39,7 @@ function AppInner() {
   const [shouldPromptHealthPermission, setShouldPromptHealthPermission] = useState<boolean>(false);
   const [hasDismissedHealthPrompt, setHasDismissedHealthPrompt] = useState<boolean>(false);
   const [workoutsFetched, setWorkoutsFetched] = useState<any[]>([]);
+  const offeredWorkoutIdsRef = useRef<Record<string, boolean>>({});
   const [fetchingWorkouts, setFetchingWorkouts] = useState<boolean>(false);
   const [workoutsFetchedOnce, setWorkoutsFetchedOnce] = useState<boolean>(false);
   const [promptTriggeredThisSession, setPromptTriggeredThisSession] = useState<boolean>(false);
@@ -231,6 +232,7 @@ function AppInner() {
       setFetchingWorkouts(true);
       const result = await runAnchoredFetches();
       setWorkoutsFetched(result.workouts || []);
+      offeredWorkoutIdsRef.current = {};
       setWorkoutsFetchedOnce(true);
       console.log('[HEALTH] auto anchored fetch complete', {
         workouts: result.workouts?.length || 0,
@@ -264,14 +266,27 @@ function AppInner() {
     fetchWorkouts,
   ]);
 
-  // Placeholder: when we have both plan data and workouts, we can trigger matching
+  // Build match candidates per session/batch; avoid re-offering the same workout within a batch
   useEffect(() => {
     if (planEntriesFromWeb.length > 0 && workoutsFetched.length > 0) {
-      console.log('[MATCH] ready to match plan vs workouts', {
-        planCount: planEntriesFromWeb.length,
-        workoutCount: workoutsFetched.length,
-      });
-      const candidates = matchWorkoutsToPlan(workoutsFetched, planEntriesFromWeb);
+      const { candidates, usedIds, debug } = matchWorkoutsToPlan(
+        workoutsFetched,
+        planEntriesFromWeb,
+        offeredWorkoutIdsRef.current,
+      );
+      if (__DEV__) {
+        console.log('[MATCH] evaluated', {
+          planCount: planEntriesFromWeb.length,
+          workoutCount: workoutsFetched.length,
+          candidateCount: candidates.length,
+          debug,
+        });
+      }
+      if (usedIds.length > 0) {
+        usedIds.forEach(id => {
+          offeredWorkoutIdsRef.current[id] = true;
+        });
+      }
       setMatchCandidates(candidates);
       setShowMatchModal(candidates.length > 0);
     }
@@ -454,8 +469,36 @@ function useHealthPermissionPrompt(
   }, [shouldPrompt, setShouldPrompt, onGranted, onDismissed]);
 }
 
-function matchWorkoutsToPlan(workouts: any[], plans: any[]) {
+function getWorkoutId(w: any): string | null {
+  const uuid = (w as any).uuid;
+  if (uuid) return uuid;
+  const id = (w as any).id;
+  if (id) return id;
+  const sessionId = (w as any).sessionId;
+  if (sessionId) return sessionId;
+  const start = (w as any).startDate ?? (w as any).start;
+  const end = (w as any).endDate ?? (w as any).end;
+  const activity = (w as any).workoutActivityType ?? (w as any).activityType ?? '';
+  if (start && end) {
+    return `${start}-${end}-${activity}`;
+  }
+  return null;
+}
+
+function matchWorkoutsToPlan(
+  workouts: any[],
+  plans: any[],
+  offeredIds: Record<string, boolean>,
+) {
   const WINDOW_MS = 4 * 60 * 60 * 1000; // ±4h
+  const debug = {
+    skippedNonSwim: 0,
+    skippedNoId: 0,
+    skippedAlreadyOffered: 0,
+    skippedOutsideDay: 0,
+    skippedOutsideWindow: 0,
+    skippedOther: 0,
+  };
 
   const normalizeDistanceMeters = (w: any) => {
     const rawDistance = (w as any).totalDistance as number | undefined;
@@ -485,6 +528,7 @@ function matchWorkoutsToPlan(workouts: any[], plans: any[]) {
   };
 
   const candidates: any[] = [];
+  const usedIds: string[] = [];
 
   plans.forEach((plan: any) => {
     const planDate = new Date(plan.trainingDate);
@@ -495,11 +539,29 @@ function matchWorkoutsToPlan(workouts: any[], plans: any[]) {
     dayEnd.setDate(dayEnd.getDate() + 1);
 
     workouts.forEach((w, idx) => {
-      if ((w as any).workoutActivityType !== 46) return; // swimming only
+      if ((w as any).workoutActivityType !== 46) {
+        debug.skippedNonSwim += 1;
+        return; // swimming only
+      }
+      const workoutId = getWorkoutId(w);
+      if (!workoutId) {
+        debug.skippedNoId += 1;
+        return;
+      }
+      if (offeredIds[workoutId]) {
+        debug.skippedAlreadyOffered += 1;
+        return;
+      }
       const startMs = new Date((w as any).startDate ?? 0).getTime();
-      if (startMs < dayStart.getTime() || startMs > dayEnd.getTime()) return;
+      if (startMs < dayStart.getTime() || startMs > dayEnd.getTime()) {
+        debug.skippedOutsideDay += 1;
+        return;
+      }
       const delta = Math.abs(startMs - planStartMs);
-      if (delta > WINDOW_MS) return;
+      if (delta > WINDOW_MS) {
+        debug.skippedOutsideWindow += 1;
+        return;
+      }
 
       const durationSeconds = (w as any).duration?.quantity as number | undefined;
       const distanceMeters = normalizeDistanceMeters(w);
@@ -532,13 +594,13 @@ function matchWorkoutsToPlan(workouts: any[], plans: any[]) {
          strokeCount,
          swolfApprox,
          reason: reasonParts.join(', '),
+         workoutId,
       });
-      
-          
+      usedIds.push(workoutId);
     });
   });
 
-  return candidates;
+  return { candidates, usedIds, debug };
 }
 
 function App() {
