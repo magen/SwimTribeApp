@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SplashScreen } from './src/components/SplashScreen';
 import { WebViewContent } from './src/components/WebViewContent';
 import { QAScreen } from './src/screens/QAScreen';
+import { GoogleFitQAScreen } from './src/screens/GoogleFitQAScreen';
 import { HealthScreen } from './src/screens/HealthScreen';
 import {
   requestUserPermission,
@@ -307,10 +308,14 @@ function AppInner() {
             planEntriesOverride={planEntriesFromWeb}
           />
         ) : showQAScreen ? (
-          <QAScreen
-            onExit={() => setShowQAScreen(false)}
-            onOpenHealth={() => setShowHealthScreen(true)}
-          />
+          Platform.OS === 'ios' ? (
+            <QAScreen
+              onExit={() => setShowQAScreen(false)}
+              onOpenHealth={() => setShowHealthScreen(true)}
+            />
+          ) : (
+            <GoogleFitQAScreen onExit={() => setShowQAScreen(false)} />
+          )
         ) : (
           <>
             {__DEV__ && (
