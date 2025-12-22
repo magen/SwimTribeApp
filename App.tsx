@@ -6,7 +6,19 @@
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StatusBar, StyleSheet, View, Platform, Pressable, Alert, Modal, Text, ScrollView } from 'react-native';
+import {
+  StatusBar,
+  StyleSheet,
+  View,
+  Platform,
+  Pressable,
+  Alert,
+  Modal,
+  Text,
+  ScrollView,
+  LayoutAnimation,
+  UIManager,
+} from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import messaging from '@react-native-firebase/messaging';
@@ -47,6 +59,12 @@ function AppInner() {
   const [matchCandidates, setMatchCandidates] = useState<any[]>([]);
   const [showMatchModal, setShowMatchModal] = useState<boolean>(false);
   const webViewRef = useRef<WebView | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
   const sendAppContextToWeb = useCallback(() => {
     // Send app context to webview
@@ -203,6 +221,23 @@ function AppInner() {
       );
     },
     [isWebViewReady, workoutsFetched],
+  );
+
+  const handleConfirmCandidate = useCallback(
+    (idx: number) => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setMatchCandidates(prev => {
+        if (!prev[idx]) return prev;
+        const candidate = prev[idx];
+        sendMatchConfirmationToWeb(candidate);
+        const next = prev.filter((_, i) => i !== idx);
+        if (next.length === 0) {
+          setShowMatchModal(false);
+        }
+        return next;
+      });
+    },
+    [sendMatchConfirmationToWeb],
   );
 
   // Prompt for workouts permission once plan data arrives (unless dismissed/granted)
@@ -375,7 +410,7 @@ function AppInner() {
             <Text style={styles.modalTitle}>Possible matches</Text>
             <ScrollView style={{ maxHeight: 420 }}>
               {matchCandidates.map((c, idx) => (
-                <View key={`${c.planId}-${idx}`} style={styles.modalItem}>
+                <View key={`${c.planId}-${c.workoutId ?? idx}`} style={styles.modalItem}>
                   <View style={styles.matchRow}>
                     <View style={styles.matchCol}>
                       <Text style={styles.modalItemTitle}>Plan</Text>
@@ -396,10 +431,7 @@ function AppInner() {
                   <Text style={styles.modalReason}>Reason: {c.reason}</Text>
                   <Pressable
                     style={[styles.qaButton, { marginTop: 8 }]}
-                    onPress={() => {
-                      sendMatchConfirmationToWeb(c);
-                      setShowMatchModal(false);
-                    }}
+                    onPress={() => handleConfirmCandidate(idx)}
                   >
                     <Text style={styles.qaButtonText}>Confirm</Text>
                   </Pressable>
