@@ -404,51 +404,96 @@ function AppInner() {
         )}
       </View>
 
-      <Modal visible={showMatchModal} transparent animationType="slide" onRequestClose={() => setShowMatchModal(false)}>
+      <Modal
+        visible={showMatchModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMatchModal(false)}
+      >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Possible matches</Text>
-            <ScrollView style={{ maxHeight: 420 }}>
-              {matchCandidates.map((c, idx) => (
-                <View key={`${c.planId}-${c.workoutId ?? idx}`} style={styles.modalItem}>
-                  <View style={styles.matchRow}>
-                    <View style={styles.matchCol}>
-                      <Text style={styles.modalItemTitle}>Plan</Text>
-                      <Text style={styles.modalItemText}>{c.planTitle}</Text>
-                      <Text style={styles.modalItemTextSmall}>{c.planStart}</Text>
-                    </View>
-                    <View style={[styles.matchCol, styles.matchColRight]}>
-                      <Text style={styles.modalItemTitle}>Workout</Text>
-                      <Text style={styles.modalItemText}>{c.workoutStart}</Text>
-                      {c.distanceMeters != null && (
-                        <Text style={styles.modalItemTextSmall}>Distance: {c.distanceMeters.toFixed(0)} m</Text>
-                      )}
-                      {c.durationSeconds != null && (
-                        <Text style={styles.modalItemTextSmall}>Duration: {(c.durationSeconds / 60).toFixed(1)} min</Text>
-                      )}
-                    </View>
-                  </View>
-                  <Text style={styles.modalReason}>Reason: {c.reason}</Text>
-                  <Pressable
-                    style={[styles.qaButton, { marginTop: 8 }]}
-                    onPress={() => handleConfirmCandidate(idx)}
-                  >
-                    <Text style={styles.qaButtonText}>Confirm</Text>
-                  </Pressable>
+          <View style={styles.matchSheet}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Match your swim</Text>
+                <Text style={styles.modalSubtitle}>
+                  We found workouts that line up with your training plan. Confirm to sync.
+                </Text>
+              </View>
+              <Pressable style={styles.iconButton} onPress={() => setShowMatchModal(false)}>
+                <Text style={styles.iconButtonText}>X</Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              style={{ maxHeight: 440 }}
+              contentContainerStyle={styles.candidatesList}
+              showsVerticalScrollIndicator={false}
+            >
+              {matchCandidates.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyTitle}>No matches yet</Text>
+                  <Text style={styles.emptyCaption}>Finish a swim and we will surface it here.</Text>
                 </View>
-              ))}
-              {matchCandidates.length === 0 && (
-            <Text style={styles.modalItemText}>No candidates found.</Text>
-          )}
-        </ScrollView>
-        <View style={styles.modalActions}>
-          <Pressable style={[styles.qaButton, styles.qaSecondaryButton]} onPress={() => setShowMatchModal(false)}>
-            <Text style={styles.qaButtonText}>Dismiss</Text>
-          </Pressable>
+              ) : (
+                matchCandidates.map((c, idx) => (
+                  <View key={`${c.planId}-${c.workoutId ?? idx}`} style={styles.candidateCard}>
+                    <View style={styles.cardHeaderRow}>
+                      <View style={styles.badgeRow}>
+                        <Text style={[styles.pill, styles.planPill]}>Plan</Text>
+                        <Text style={styles.cardTitle}>{c.planTitle}</Text>
+                      </View>
+                      <Text style={styles.metaText}>{c.planStart}</Text>
+                    </View>
+
+                    <View style={styles.timelineRow}>
+                      <View style={[styles.timelineDot, styles.planDot]} />
+                      <View style={styles.timelineLine} />
+                      <View style={[styles.timelineDot, styles.workoutDot]} />
+                    </View>
+
+                    <View style={styles.cardBodyRow}>
+                      <View style={styles.cardColumn}>
+                        <Text style={styles.label}>Planned</Text>
+                        <Text style={styles.value}>{c.planStart}</Text>
+                      </View>
+                      <View style={styles.cardColumn}>
+                        <Text style={styles.label}>Workout</Text>
+                        <Text style={styles.value}>{c.workoutStart}</Text>
+                        {c.distanceMeters != null && (
+                          <Text style={styles.metaText}>
+                            Distance: {c.distanceMeters.toFixed(0)} m
+                          </Text>
+                        )}
+                        {c.durationSeconds != null && (
+                          <Text style={styles.metaText}>
+                            Duration: {(c.durationSeconds / 60).toFixed(1)} min
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+
+                    <View style={styles.reasonBadge}>
+                      <Text style={styles.reasonText}>{c.reason}</Text>
+                    </View>
+
+                    <Pressable
+                      style={styles.confirmButton}
+                      onPress={() => handleConfirmCandidate(idx)}
+                    >
+                      <Text style={styles.confirmButtonText}>Confirm match</Text>
+                    </Pressable>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+            <View style={styles.modalActions}>
+              <Pressable style={styles.dismissButton} onPress={() => setShowMatchModal(false)}>
+                <Text style={styles.dismissButtonText}>Close</Text>
+              </Pressable>
+            </View>
+          </View>
         </View>
-      </View>
-    </View>
-  </Modal>
+      </Modal>
     </>
   );
 }
@@ -522,7 +567,7 @@ function matchWorkoutsToPlan(
   plans: any[],
   offeredIds: Record<string, boolean>,
 ) {
-  const WINDOW_MS = 4 * 60 * 60 * 1000; // ±4h
+  const WINDOW_MS = 10 * 60 * 60 * 1000; // ±4h
   const debug = {
     skippedNonSwim: 0,
     skippedNoId: 0,
@@ -654,68 +699,200 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
+    backgroundColor: 'rgba(4, 14, 34, 0.65)',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 12,
+    paddingVertical: 16,
   },
-  modalCard: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+  matchSheet: {
+    backgroundColor: '#0B1F3F',
+    borderRadius: 16,
     padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 6,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 48,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#1F2F50',
+    marginBottom: 12,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 12,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    marginBottom: 12,
-    color: '#111827',
+    color: '#FFFFFF',
   },
-  modalItem: {
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
-  },
-  modalItemTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  modalItemText: {
+  modalSubtitle: {
+    marginTop: 4,
     fontSize: 13,
-    color: '#4B5563',
+    color: '#D6E1FF',
+    lineHeight: 18,
   },
-  modalItemTextSmall: {
-    fontSize: 12,
-    color: '#6B7280',
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#12294F',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  modalReason: {
-    fontSize: 12,
-    color: '#374151',
+  iconButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  candidatesList: {
+    paddingVertical: 4,
+    gap: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    backgroundColor: '#0F2449',
+    borderRadius: 12,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  emptyCaption: {
     marginTop: 6,
+    color: '#C7D5FF',
+    fontSize: 13,
   },
-  matchRow: {
+  candidateCard: {
+    backgroundColor: '#0F2449',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#1F2F50',
+    gap: 10,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  pill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#112B52',
+    color: '#C7D5FF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  planPill: {
+    backgroundColor: '#0EA5E9',
+    color: '#0B1F3F',
+  },
+  cardTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  metaText: {
+    color: '#A6B7D6',
+    fontSize: 12,
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#0EA5E9',
+  },
+  planDot: {
+    backgroundColor: '#0EA5E9',
+  },
+  workoutDot: {
+    backgroundColor: '#7C9BFF',
+  },
+  timelineLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#1F3B68',
+    borderRadius: 4,
+  },
+  cardBodyRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
   },
-  matchCol: {
+  cardColumn: {
     flex: 1,
+    gap: 4,
   },
-  matchColRight: {
-    alignItems: 'flex-end',
+  label: {
+    color: '#C7D5FF',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
-  modalActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 8,
+  value: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  reasonBadge: {
+    backgroundColor: '#112B52',
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  reasonText: {
+    color: '#C7D5FF',
+    fontSize: 12,
+  },
+  confirmButton: {
+    marginTop: 4,
+    backgroundColor: '#0EA5E9',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    color: '#0B1F3F',
+    fontWeight: '800',
+    fontSize: 15,
   },
   modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
     marginTop: 12,
-    gap: 8,
+  },
+  dismissButton: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#1F3B68',
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#0F2449',
+  },
+  dismissButtonText: {
+    color: '#C7D5FF',
+    fontWeight: '700',
+    fontSize: 15,
   },
 });
 
