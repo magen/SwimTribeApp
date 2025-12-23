@@ -136,7 +136,14 @@ export async function runAnchoredFetches(): Promise<IngestionResult> {
     console.warn('[HealthKit] heart rate anchor query failed', err);
   }
 
+  console.log('[HealthKit] saving next anchors', nextAnchors);
   await saveAnchors(nextAnchors);
+  console.log('[HealthKit] anchored fetches complete');
+
+  console.log('[HealthKit] fetched totals', {
+    workouts: workouts.length,
+    heartRates: heartRates.length,
+  }); 
   return { workouts, heartRates, nextAnchors };
 }
 
